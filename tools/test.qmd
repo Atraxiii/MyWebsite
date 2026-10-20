@@ -1,0 +1,237 @@
+---
+title: "Test"
+---
+
+### HI
+```{shinylive-python}
+#| standalone: true
+#| viewerHeight: 520
+## file: app.py
+from shiny import App, reactive, render, ui
+
+from core import *
+
+
+# Must match the theme in MyWebsite/_quarto.yml, e.g. "flatly", "darkly", "cosmo".
+BOOTSWATCH_THEME = "sketchy"
+
+app_ui = ui.page_fluid(
+    ui.head_content(
+        ui.tags.link(
+            rel="stylesheet",
+            href=(
+                "https://cdn.jsdelivr.net/npm/bootswatch@5/dist/"
+                f"{BOOTSWATCH_THEME}/bootstrap.min.css"
+            ),
+        )
+    ),
+    ui.layout_sidebar(
+        ui.sidebar(
+            # TODO: swap/add inputs to match your function's parameters.
+            ui.input_text("user_input", "Input", placeholder="Type something..."),
+            ui.input_action_button("run", "Run", class_="btn-primary w-100"),
+            width=300,
+        ),
+        ui.card(
+            ui.card_header("Result"),
+            ui.output_text_verbatim("result"),
+        ),
+    ),
+)
+
+
+def server(input, output, session):
+    @render.text
+    @reactive.event(input.run)  # only recompute when "Run" is clicked
+    def result():
+        try:
+            return str(input.user_input())
+        except Exception as e:
+            return f"Error: {e}"
+
+
+app = App(app_ui, server)
+## file: core.py
+
+
+# GLOBAL LOOKUP TABLES =========================================================
+CONN = {
+    "∧": "_and",
+    "∨": "_or",
+    "⇒": "_implies",
+    "⇔": "_iff"
+}
+
+EXPR = {}
+# ==============================================================================
+
+
+# MY FUNCTIONS =================================================================
+def init_vars(statements: list[str]) -> None:
+    """
+    ARGUMENTS:
+        statements: list[str]
+            User input from the UI.
+    
+    Adds variables to the EXPR dictionary.
+    """
+    listed_variables = ["P", "Q", "R", "S", "T"]
+    used_variables = []
+
+    for var in listed_variables:
+        for statement in statements:
+            if var in statement:
+                used_variables.append(var)
+                break
+    
+    num_vars = len(used_variables)
+    for idx, var in enumerate(used_variables):
+        num_subsections = 2**(idx+1)        # No of subsections of the representation
+        subsection_length = 2**(num_vars - idx - 1)    # Length of each individual subsection
+        variable = ""                   
+        flag = 1
+        for j in range(num_subsections):
+            variable += f"{flag}"*subsection_length
+            if flag == 1: flag = 0
+            else: flag = 1
+        EXPR[var] = variable
+
+    for statement in statements:
+        EXPR[statement] = eval(translate(statement))
+    
+    return None
+
+def _and(var1: str, var2: str) -> str:
+    """AND operator for two variables of same length."""
+    if len(var1) != len(var2): raise Exception("Size of both variables must be the same!")
+
+    out = ""
+    for idx in range(len(var1)):
+        if (var1[idx] == "1") and (var2[idx] == "1"): out += "1"
+        else: out += "0"
+    return out
+
+def _or(var1: str, var2: str) -> str:
+    """OR operator for two variables of same length."""
+    if len(var1) != len(var2): raise Exception("Size of both variables must be the same!")
+
+    out = ""
+    for idx in range(len(var1)):
+        if (var1[idx] == "0") and (var2[idx] == "0"): out += "0"
+        else: out += "1"
+    return out
+
+def _not(var1: str) -> str:
+    """NOT operator for a variable."""
+    out = ""
+    for idx in range(len(var1)):
+        if var1[idx] == "0": out+= "1"
+        else: out += "0"
+    return out
+
+def _implies(var1: str, var2: str) -> str:
+    if len(var1) != len(var2): raise Exception("Size of both variables must be the same!")
+
+    out = ""
+    for idx in range(len(var1)):
+        if (var1[idx] == "1") and (var2[idx] == "0"): out += "0"
+        else: out += "1"
+    return out
+
+
+def _iff(var1: str, var2: str) -> str:
+    if len(var1) != len(var2): raise Exception("Size of both variables must be the same!")
+
+    out = ""
+    for idx in range(len(var1)):
+        if var1[idx] == var2[idx]: out += "1"
+        else: out += "0"
+    return out
+
+
+def translate(expr: str) -> str:
+    expr = expr.strip()
+
+    # Base Case: Single Variable
+    if expr.isalpha() and len(expr) == 1:
+        return EXPR[expr]
+    
+    # Removes outer parantheses if it encloses the whole statement
+    if expr.startswith("(") and expr.endswith(")"):
+        depth = 0
+        encloses_all = True
+        
+        for i, char in enumerate(expr):
+            if char == "(": depth += 1
+            elif char == ")": depth -= 1
+
+            if depth == 0 and i < len(expr) - 1: 
+                encloses_all = False
+                break
+        
+        if encloses_all:
+            expr = expr[1:-1].strip()
+
+    # Find the top-level connector
+    depth = 0
+    for i, char in enumerate(expr):
+        if char == "(": depth += 1
+        elif char == ")": depth -= 1
+
+        elif depth == 0 and char in CONN:
+            left_operand = expr[:i].strip()
+            right_operand = expr[i+1:].strip()
+
+            if not left_operand: raise ValueError("Missing left operand")
+            if not right_operand: raise ValueError("Missing right operand")
+            
+            function = CONN[char]
+
+            return f"{function}(str({translate(left_operand)}), str({translate(right_operand)}))"
+    # Handle Negation
+    if expr.startswith("¬"):
+        operand = expr[1:].strip()
+        
+        if not operand: raise ValueError("Missing operand after negation")
+
+        return f"_not(str({translate(operand)}))"
+
+    raise ValueError(f"Invalid Expression: {expr}")
+
+
+def check_argument_validity(premises: list[str], conclusion: str) -> tuple[bool, (int | None)]:
+    conclusion = EXPR[conclusion]
+    num_rows = len(conclusion)
+    for row in range(num_rows):
+        all_premises_true = all([EXPR[premise][row] == "1" for premise in premises])
+        if all_premises_true and conclusion[row] == "0": return False, (row + 1)
+
+    return True, None
+
+
+def check_consistency(premises: list[str]) -> tuple[bool, (int | None)]:
+    num_rows = len(EXPR[premises[0]])
+
+    for row in range(num_rows):
+        all_premises_true = all([EXPR[premise][row] == "1" for premise in premises])
+        if all_premises_true: return True, None
+
+    return False, (row + 1)
+
+
+def calculate_reliability() -> None:
+    pass
+
+
+def gen_truth_table() -> dict[str, str]:
+    truth_table = {}
+    conversion = {"1": "T", "0": "F"}
+
+    for key, value in EXPR.items():
+        truth_table[key] = [conversion[i] for i in value]
+
+    return truth_table
+# ==============================================================================
+
+## file: requirements.txt
+```

@@ -1,0 +1,38 @@
+project:
+  type: website
+
+website:
+  title: "Aditya Agarwal"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: about.qmd
+        text: About
+      - href: publications.qmd
+        text: Publications
+      - href: interests.qmd
+        text: Interests
+      - href: projects.qmd
+        text: Projects
+      - href: tools.qmd
+        text: Scripts and Tools
+      - href: ramblings.qmd
+        text: Ramblings (Blog)
+      - href: guides.qmd
+        text: Guides
+      - href: hasse-diagram.qmd
+        text: Hasse
+      - href: tools/ZoL-solver.qmd
+        text: ZOL
+
+format:
+  html:
+    theme:
+      light: sketchy
+      dark: sketchy
+    css: styles.css
+    toc: true
+
+filters:
+  - shinylive

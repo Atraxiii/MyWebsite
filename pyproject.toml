@@ -1,0 +1,24 @@
+[project]
+name = "mywebsite"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Atraxiii", email = "adityaagarwal858@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "ipykernel>=7.4.0",
+    "nbclient>=0.11.0",
+    "nbformat>=5.11.1",
+    "pyyaml>=6.0.3",
+    "shiny>=1.8.0",
+    "shinylive>=0.8.12",
+]
+
+[project.scripts]
+mywebsite = "mywebsite:main"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"

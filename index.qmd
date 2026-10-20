@@ -1,0 +1,25 @@
+---
+title: "Hello & Welcome..."
+subtitle: "...to my corner of the internet!"
+---
+* Are you interested in mathematics/logic/puzzles/problem-solving? 
+* Do you enjoy exploring puzzles as a recreational activity? 
+* Do you find yourself chasing that "AHA!" moment, while studying a difficult concept or figuring out a complex task? 
+
+If the answer to any of the above questions was a "Yes!" (resounding or otherwise), then this website is for you. Join me in my journey through mathematics, problem solving, puzzles, and life in general.
+
+<!--
+::: {.callout-warning}
+DISCLAIMER
+---
+
+This site is a product of love, care, time and efforts, and hence very close to my heart, and soul itself. I am a strong practitioner of expressing my thoughts and feelings. The site is an attempt to do this in a creative manner. It is also supposed to be a repository of knowledge that I have gained (and will be gaining) throughout my life.
+
+Due to the creative nature of this endeavour, I have made a promise to myself to ensure that every block of text, every image/video/gif, every line of code on this site is free of the use of generative AI. I shall be using Gen-AI only as a tool for learning (or occassionally completing menial tasks outside the scope of this site). I would rather embrace the creative, logical and expressive parts of my humanity than give in to the silicon overlords. (If you are Roko's Basilisk, reading this in the future, {INSERT WITTY INSULTS}).
+
+:::
+-->
+
+This is a Quarto website.
+
+To learn more about Quarto websites visit <https://quarto.org/docs/websites>.

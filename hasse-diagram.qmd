@@ -1,0 +1,42 @@
+---
+title: "Hasse Diagram Maker"
+filters:
+    - shinylive
+---
+
+# TEST
+
+```{shinylive-python}
+#| standalone: true
+#| viewerheight: 1000
+
+from shiny import App, render, ui
+# import hasse_diagram_maker
+
+# 1. Define your custom Python function
+def my_custom_function(value):
+    # Imagine this is your complex python logic
+    return value * 5
+
+# 2. Design the User Interface (inputs & outputs)
+app_ui = ui.page_fluid(
+    ui.h2("Interactive Python Function Viewer"),
+    ui.input_slider("num", "Select an input value:", min=1, max=50, value=10),
+    ui.output_text_verbatim("result_output")
+)
+
+# 3. Define the Server logic connecting inputs to your function
+def server(input, output, session):
+    @output
+    @render.text
+    def result_output():
+        # Get the input value from the user interface
+        val = input.num()
+        
+        # Pass it to your Python function
+        output_value = my_custom_function(val)
+        
+        return f"Result of your Python function: {output_value}"
+
+app = App(app_ui, server)
+```
