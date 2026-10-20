@@ -1,6 +1,6 @@
 ```{shinylive-python}
 #| standalone: true
-#| viewerHeight: 1000px
+#| viewerHeight: 100%
 ## file: app.py
 from shiny import reactive
 from shiny.express import input, render, ui
@@ -232,118 +232,122 @@ with ui.div(cls="lines-output"):
     def show_lines():
         return repr(lines())
 
-# Analysis Results Section
+# Analysis Results Section (Triggered ONLY on RUN click)
 with ui.div(cls="output-section"):
     ui.h4("Analysis Results")
     
     @render.ui
     def show_results():
-        _ = run_trigger.get()  # Trigger execution on RUN click
-        mode = input.analysis_mode()
-        lns = lines()
+        # Takes reactive dependency ONLY on run_trigger (the RUN button)
+        _ = run_trigger.get() 
         
-        if not lns:
-            return ui.div(
-                ui.p(ui.strong("Selected Analysis Mode: "), mode),
-                ui.p("Status: Please enter at least one formula or premise and click 'RUN'.", style="color: red;")
-            )
-        
-        try:
-            # Initialize variables and evaluate via core.py
-            core.init_vars(lns)
+        # Isolate inputs so typing, mode changing, or parameter sliding don't trigger auto-calculation
+        with reactive.isolate():
+            mode = input.analysis_mode()
+            lns = lines()
             
-            results_elements = [
-                ui.p(ui.strong("Selected Analysis Mode: "), mode),
-                ui.p(ui.strong("Active Formula Lines: "), str(len(lns)))
-            ]
+            if not lns:
+                return ui.div(
+                    ui.p(ui.strong("Selected Analysis Mode: "), mode),
+                    ui.p("Status: Please enter at least one formula or premise and click 'RUN'.", style="color: red;")
+                )
             
-            # 1. Premises Consistency
-            if mode == "Check Premises Consistency":
-                consistent, row_num = core.check_consistency(lns)
-                if consistent:
-                    results_elements.append(ui.p(ui.strong("Result: "), "The premises are CONSISTENT.", style="color: green; font-weight: bold;"))
-                else:
-                    results_elements.append(ui.p(ui.strong("Result: "), f"The premises are INCONSISTENT (conflict at row {row_num}).", style="color: red; font-weight: bold;"))
-            
-            # 2. Argument Validity
-            elif mode == "Check Argument Validity":
-                if len(lns) < 2:
-                    results_elements.append(ui.p("Error: Argument validity check requires at least 2 lines (premises followed by conclusion on the last line).", style="color: red;"))
-                else:
-                    valid, row_num = core.check_argument_validity(lns)
-                    if valid:
-                        results_elements.append(ui.p(ui.strong("Result: "), "The argument is VALID.", style="color: green; font-weight: bold;"))
+            try:
+                # Initialize variables and evaluate via core.py
+                core.init_vars(lns)
+                
+                results_elements = [
+                    ui.p(ui.strong("Selected Analysis Mode: "), mode),
+                    ui.p(ui.strong("Active Formula Lines: "), str(len(lns)))
+                ]
+                
+                # 1. Premises Consistency
+                if mode == "Check Premises Consistency":
+                    consistent, row_num = core.check_consistency(lns)
+                    if consistent:
+                        results_elements.append(ui.p(ui.strong("Result: "), "The premises are CONSISTENT.", style="color: green; font-weight: bold;"))
                     else:
-                        results_elements.append(ui.p(ui.strong("Result: "), f"The argument is INVALID (counterexample at row {row_num}).", style="color: red; font-weight: bold;"))
-            
-            # 3. System Reliability
-            elif mode == "Calculate System Reliability":
-                if len(lns) > 1:
-                    results_elements.append(ui.p("Note: Reliability calculation uses the first formula line as the system expression.", style="color: orange;"))
-                sys_expr = lns[0]
-                vars_list = active_vars()
-                reliabilities = {}
-                for v in vars_list:
-                    val = input.get(f"param_{v}", 0.9)
-                    reliabilities[v] = float(val) if val is not None else 0.9
+                        results_elements.append(ui.p(ui.strong("Result: "), f"The premises are INCONSISTENT (conflict at row {row_num}).", style="color: red; font-weight: bold;"))
                 
-                rel = core.calculate_reliability(sys_expr, reliabilities)
-                results_elements.append(ui.p(ui.strong("System Reliability: "), f"{rel:.6f} ({rel * 100:.2f}%)", style="color: blue; font-weight: bold;"))
-            
-            # 4. Top Event Probability
-            elif mode == "Calculate Top Event Probability":
-                if len(lns) > 1:
-                    results_elements.append(ui.p("Note: Top event probability uses the first formula line as the top event expression.", style="color: orange;"))
-                top_expr = lns[0]
-                vars_list = active_vars()
-                probabilities = {}
-                for v in vars_list:
-                    val = input.get(f"param_{v}", 0.1)
-                    probabilities[v] = float(val) if val is not None else 0.1
+                # 2. Argument Validity
+                elif mode == "Check Argument Validity":
+                    if len(lns) < 2:
+                        results_elements.append(ui.p("Error: Argument validity check requires at least 2 lines (premises followed by conclusion on the last line).", style="color: red;"))
+                    else:
+                        valid, row_num = core.check_argument_validity(lns)
+                        if valid:
+                            results_elements.append(ui.p(ui.strong("Result: "), "The argument is VALID.", style="color: green; font-weight: bold;"))
+                        else:
+                            results_elements.append(ui.p(ui.strong("Result: "), f"The argument is INVALID (counterexample at row {row_num}).", style="color: red; font-weight: bold;"))
                 
-                prob = core.calculate_top_event_probability(top_expr, probabilities)
-                results_elements.append(ui.p(ui.strong("Top Event Probability: "), f"{prob:.6f} ({prob * 100:.2f}%)", style="color: blue; font-weight: bold;"))
+                # 3. System Reliability
+                elif mode == "Calculate System Reliability":
+                    if len(lns) > 1:
+                        results_elements.append(ui.p("Note: Reliability calculation uses the first formula line as the system expression.", style="color: orange;"))
+                    sys_expr = lns[0]
+                    vars_list = active_vars()
+                    reliabilities = {}
+                    for v in vars_list:
+                        val = input.get(f"param_{v}", 0.9)
+                        reliabilities[v] = float(val) if val is not None else 0.9
+                    
+                    rel = core.calculate_reliability(sys_expr, reliabilities)
+                    results_elements.append(ui.p(ui.strong("System Reliability: "), f"{rel:.6f} ({rel * 100:.2f}%)", style="color: blue; font-weight: bold;"))
+                
+                # 4. Top Event Probability
+                elif mode == "Calculate Top Event Probability":
+                    if len(lns) > 1:
+                        results_elements.append(ui.p("Note: Top event probability uses the first formula line as the top event expression.", style="color: orange;"))
+                    top_expr = lns[0]
+                    vars_list = active_vars()
+                    probabilities = {}
+                    for v in vars_list:
+                        val = input.get(f"param_{v}", 0.1)
+                        probabilities[v] = float(val) if val is not None else 0.1
+                    
+                    prob = core.calculate_top_event_probability(top_expr, probabilities)
+                    results_elements.append(ui.p(ui.strong("Top Event Probability: "), f"{prob:.6f} ({prob * 100:.2f}%)", style="color: blue; font-weight: bold;"))
 
-            # Include PDNF and PCNF for single statements
-            if len(lns) == 1:
-                stmt = lns[0]
-                pdnf = core.generate_pdnf(stmt)
-                pcnf = core.generate_pcnf(stmt)
-                results_elements.extend([
-                    ui.hr(),
-                    ui.p(ui.strong("PDNF (Principal Disjunctive Normal Form): "), pdnf),
-                    ui.p(ui.strong("PCNF (Principal Conjunctive Normal Form): "), pcnf)
-                ])
-            
-            # Generate and Render Truth Table
-            tt = core.gen_truth_table()
-            if tt:
-                headers = list(tt.keys())
-                num_rows = len(list(tt.values())[0])
+                # Include PDNF and PCNF for single statements
+                if len(lns) == 1:
+                    stmt = lns[0]
+                    pdnf = core.generate_pdnf(stmt)
+                    pcnf = core.generate_pcnf(stmt)
+                    results_elements.extend([
+                        ui.hr(),
+                        ui.p(ui.strong("PDNF (Principal Disjunctive Normal Form): "), pdnf),
+                        ui.p(ui.strong("PCNF (Principal Conjunctive Normal Form): "), pcnf)
+                    ])
                 
-                table_headers = [ui.tags.th(h) for h in headers]
-                table_rows = []
-                for r_idx in range(num_rows):
-                    row_cells = [ui.tags.td(tt[h][r_idx]) for h in headers]
-                    table_rows.append(ui.tags.tr(*row_cells))
-                
-                results_elements.extend([
-                    ui.hr(),
-                    ui.h5("Truth Table"),
-                    ui.tags.table(
-                        ui.tags.thead(ui.tags.tr(*table_headers)),
-                        ui.tags.tbody(*table_rows),
-                        cls="truth-table"
-                    )
-                ])
+                # Generate and Render Truth Table
+                tt = core.gen_truth_table()
+                if tt:
+                    headers = list(tt.keys())
+                    num_rows = len(list(tt.values())[0])
+                    
+                    table_headers = [ui.tags.th(h) for h in headers]
+                    table_rows = []
+                    for r_idx in range(num_rows):
+                        row_cells = [ui.tags.td(tt[h][r_idx]) for h in headers]
+                        table_rows.append(ui.tags.tr(*row_cells))
+                    
+                    results_elements.extend([
+                        ui.hr(),
+                        ui.h5("Truth Table"),
+                        ui.tags.table(
+                            ui.tags.thead(ui.tags.tr(*table_headers)),
+                            ui.tags.tbody(*table_rows),
+                            cls="truth-table"
+                        )
+                    ])
 
-            return ui.div(*results_elements)
+                return ui.div(*results_elements)
 
-        except Exception as e:
-            return ui.div(
-                ui.p(ui.strong("Selected Analysis Mode: "), mode),
-                ui.p(f"Error executing analysis: {str(e)}", style="color: red; font-weight: bold;")
-            )
+            except Exception as e:
+                return ui.div(
+                    ui.p(ui.strong("Selected Analysis Mode: "), mode),
+                    ui.p(f"Error executing analysis: {str(e)}", style="color: red; font-weight: bold;")
+                )
 ## file: core.py
 # AUTHORSHIP ===================================================================
 # file: ak.py
@@ -495,8 +499,8 @@ def calculate_top_event_probability(statement: str, basic_event_probabilities: d
     return probability
 
 
-def generate_pdnf(statement: str) -> str:
-    results = EXPR[statement]
+def generate_pdnf(statement: list[str]) -> str:
+    results = EXPR[statement[0]]
     num_rows = len(results)
     min_terms = []
 
@@ -516,8 +520,8 @@ def generate_pdnf(statement: str) -> str:
     return " ∨ ".join(min_terms)
 
 
-def generate_pcnf(statement: str) -> str:
-    results = EXPR[statement]
+def generate_pcnf(statement: list[str]) -> str:
+    results = EXPR[statement[0]]
     num_rows = len(results)
     max_terms = []
 
@@ -589,7 +593,7 @@ def init_vars(statements: list[str]) -> None:
         EXPR[var] = variable
 
     for statement in statements:
-        EXPR[statement] = eval(translate(statement))
+        EXPR[statement] = str(eval(translate(statement)))
     
     return None
 

@@ -15,3 +15,5 @@ Thumbs.db
 
 # Optional: temporary tree export
 tree.txt
+/.quarto/
+**/*.quarto_ipynb
